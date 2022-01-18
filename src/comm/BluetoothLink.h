@@ -19,14 +19,22 @@
 #include <QtBluetooth/QBluetoothSocket>
 #include <qbluetoothserviceinfo.h>
 #include <qbluetoothservicediscoveryagent.h>
+#include <QtBluetooth/QLowEnergyController>
+#include <QtBluetooth/QLowEnergyService>
 
 #include "QGCConfig.h"
 #include "LinkConfiguration.h"
 #include "LinkInterface.h"
 
+#define UARTSERVICEUUID "0000ffe0-0000-1000-8000-00805f9b34fb"
+#define RXTXUUID "0000FFE1-0000-1000-8000-00805F9B34FB"
+#define CHUNK_SIZE 20
+
 class QBluetoothDeviceDiscoveryAgent;
 class QBluetoothServiceDiscoveryAgent;
+class QLowEnergyController;
 class LinkManager;
+
 
 class BluetoothData
 {
@@ -62,6 +70,7 @@ public:
 #else
     QString address;
 #endif
+    bool isBle;
 };
 
 class BluetoothConfiguration : public LinkConfiguration
@@ -145,6 +154,24 @@ private slots:
     void _writeBytes(const QByteArray bytes) override;
 
 private:
+    // BLE interfaces
+    void createBleController(const BluetoothData& device);
+    void bleServiceDiscovered(const QBluetoothUuid& newService);
+    void bleServiceDiscoveryFinished();
+    void bleErrorOccured(QLowEnergyController::Error error);
+    void bleStateChanged(QLowEnergyController::ControllerState state);
+    void bleConnected();
+    void bleDisconnected();
+    void bleWriteData(const QByteArray& data);
+    void bleServiceStateChanged(QLowEnergyService::ServiceState newState);
+    void bleReceiveData(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue);
+    void confirmedDescriptorWrite(const QLowEnergyDescriptor &descriptor, const QByteArray &newValue);
+    void bleWaitForWrite();
+
+    QLowEnergyController* _bleController { nullptr };
+    QLowEnergyService* _bleService { nullptr };
+    QLowEnergyDescriptor _notificationDescTx;
+    bool _isUartFound { false };
 
     // LinkInterface overrides
     bool _connect(void) override;
